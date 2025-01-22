@@ -75,7 +75,11 @@ modelBuilder.EntitySet<UserRequest>("UserRequests");
 modelBuilder.EntitySet<AttachmentUser>("Attachments");
 
 builder.Services.AddControllers().AddOData(options =>
-    options.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100).AddRouteComponents("odata", modelBuilder.GetEdmModel()));
+    options.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100).AddRouteComponents("odata", modelBuilder.GetEdmModel()))
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(UserMappingProfile));
@@ -113,6 +117,25 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+// Создание ролей при запуске приложения
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+    var roles = new[] { "Admin", "Operator", "User" };
+
+    foreach (var role in roles)
+    {
+        if (!await roleManager.RoleExistsAsync(role))
+        {
+            await roleManager.CreateAsync(new IdentityRole(role));
+            Console.WriteLine($"Роль '{role}' была добавлена в базу данных.");
+        }
+    }
+}
+
+
 
 // Middleware
 app.UseSwagger();

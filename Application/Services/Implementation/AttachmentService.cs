@@ -14,7 +14,16 @@ namespace Application.Services.Implementation
             _attachmentRepository = attachmentRepository;
         }
 
-        public async Task<AttachmentUser> UploadAttachmentAsync(IFormFile file, Guid requestId, CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Метод для загрузки вложений
+        /// </summary>
+        /// <param name="file"></param>
+        /// <param name="requestId"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        public async Task<AttachmentUser> UploadAttachmentAsync(IFormFile file, Guid requestId,
+            CancellationToken cancellationToken = default)
         {
             if (file is null || file.Length == 0) throw new ArgumentException("File is null or empty.");
 
@@ -52,6 +61,31 @@ namespace Application.Services.Implementation
             await _attachmentRepository.SaveChangesAsync(cancellationToken);
 
             return attachment;
+        }
+
+        /// <summary>
+        /// Удаление вложения
+        /// </summary>
+        /// <param name="attachmentId"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task<bool> DeleteAttachmentAsync(Guid attachmentId, CancellationToken cancellationToken = default)
+        {
+            var attachment = await _attachmentRepository.GetByIdAsync(attachmentId, cancellationToken);
+            if (attachment == null) return false;
+
+            // Удаление файла с диска
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", attachment.FilePath);
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+
+            // Удаление из базы данных
+            await _attachmentRepository.DeleteAsync(attachment);
+            await _attachmentRepository.SaveChangesAsync(cancellationToken);
+
+            return true;
         }
     }
 }

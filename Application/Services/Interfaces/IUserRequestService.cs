@@ -1,5 +1,6 @@
 using Application.Dtos.Request;
 using Domain.Models;
+using Domain.Primitives;
 using Microsoft.AspNetCore.OData.Query;
 
 namespace Application.Services.Interfaces;
@@ -8,7 +9,7 @@ public interface IUserRequestService
 {
     Task<Guid> CreateRequestAsync(
         string userId,
-        string topic,
+        Department topic,
         string description , IEnumerable<IFormFile> files, CancellationToken cancellationToken = default);
     
     Task<UserRequestDto?> GetRequestAsync(Guid requestId, 
@@ -18,7 +19,10 @@ public interface IUserRequestService
     Task CloseRequestAsync(Guid requestId, 
         CancellationToken cancellationToken = default);
 
-    Task<IQueryable<UserRequestDto>> GetUserRequestsByUserIdAsync(string userId,
-        ODataQueryOptions<UserRequestDto> queryOptions);
+    Task<IQueryable<GetUserRequestDto>> GetUserRequestsByUserIdAsync(string userId,
+        ODataQueryOptions<GetUserRequestDto> queryOptions);
+
+    public Task UpdateRequest(Guid requestId, UpdateUserRequestDto updateRequest, IEnumerable<IFormFile> files,
+        CancellationToken cancellationToken = default);
 
 }

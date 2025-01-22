@@ -52,4 +52,31 @@ public class AccountController : ControllerBase
             return BadRequest(new { Message = ex.Message });
         }
     }
+    [HttpPost("send-reset-password-email")]
+    public async Task<IActionResult> SendResetPasswordEmail([FromBody] SendResetPasswordDto request)
+    {
+        try
+        {
+            await _accountService.SendResetPasswordEmailAsync(request.Email);
+            return Ok(new { Message = "Password reset email sent successfully" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto request)
+    {
+        try
+        {
+            await _accountService.ResetPasswordAsync(request.Email, request.ResetToken, request.NewPassword);
+            return Ok(new { Message = "Password reset successfully" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
 }

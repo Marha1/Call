@@ -2,7 +2,7 @@ namespace Domain.Primitives;
 
 public enum RequestStatus
 {
-    New,
+    Open,
     InProgress,
     Completed,
     Canceled
