@@ -2,7 +2,6 @@ using System.Security.Claims;
 using Application.Dtos.Request;
 using Application.Services.Interfaces;
 using AutoMapper;
-using Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -14,55 +13,86 @@ namespace Application.Controllers;
 [Route("api/[controller]")]
 public class UserRequestController : ControllerBase
 {
-    private readonly IUserRequestService _userRequestService;
     private readonly IMapper _mapper;
+    private readonly IUserRequestService _userRequestService;
+    private CancellationToken _cancellationToken = default;
 
     public UserRequestController(IUserRequestService userRequestService, IMapper mapper)
     {
         _userRequestService = userRequestService;
         _mapper = mapper;
     }
+
     /// <summary>
-    /// Добавление
+    ///     Добавление
     /// </summary>
     /// <param name="requestDto"></param>
     /// <param name="files"></param>
     /// <returns></returns>
     /// <exception cref="UnauthorizedAccessException"></exception>
     [HttpPost("AddRequest")]
-public async Task<IActionResult> AddRequest([FromForm] UserRequestCreateDto requestDto, [FromForm] IEnumerable<IFormFile> files)
-{
-    try
+    public async Task<IActionResult> AddRequest([FromForm] UserRequestCreateDto requestDto,
+        [FromForm] IEnumerable<IFormFile> files)
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
-        if (string.IsNullOrEmpty(userId))
+        try
         {
-            return Unauthorized("User not authorized");
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized("User not authorized");
+
+            // Вызов сервиса с DTO и идентификатором пользователя
+            var requestId =
+                await _userRequestService.CreateRequestAsync(userId, requestDto.Topic, requestDto.Description, files);
+
+            return Ok(new { Message = "Request added successfully", RequestId = requestId });
         }
-
-        // Вызов сервиса с DTO и идентификатором пользователя
-        var requestId = await _userRequestService.CreateRequestAsync(userId, requestDto.Topic, requestDto.Description,files);
-
-        return Ok(new { Message = "Request added successfully", RequestId = requestId });
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            return StatusCode(500, "Internal server error");
+        }
     }
-    catch (Exception ex)
+
+    /// <summary>
+    ///     Обновление тикета(текста)
+    /// </summary>
+    /// <param name="requestId"></param>
+    /// <param name="files"></param>
+    /// <param name="requestDto"></param>
+    /// <returns></returns>
+    [HttpPut("update-request")]
+    public async Task<IActionResult> UpdateRequest(
+        [FromQuery] Guid requestId,
+        [FromForm] IEnumerable<IFormFile> files,
+        [FromForm] UpdateUserRequestDto requestDto)
     {
-        Console.WriteLine($"Error: {ex.Message}");
-        return StatusCode(500, "Internal server error");
+        try
+        {
+            await _userRequestService.UpdateRequest(requestId, requestDto, files, default);
+
+            return Ok(new { Message = "Request updated successfully", RequestId = requestId });
+        }
+        catch (Exception ex)
+        {
+            // Логирование ошибки (по возможности)
+            Console.WriteLine($"Error updating request: {ex.Message}");
+
+            return StatusCode(500, "Internal server error");
+        }
     }
-}
-/// <summary>
-/// Отмена тикета
-/// </summary>
-/// <param name="requestId"></param>
-/// <returns></returns>
+
+
+    /// <summary>
+    ///     Отмена тикета
+    /// </summary>
+    /// <param name="requestId"></param>
+    /// <returns></returns>
     [HttpDelete("CancelRequest/{requestId}")]
     public async Task<IActionResult> CancelRequest(Guid requestId)
     {
         try
         {
             // Отмена запроса
-            await _userRequestService.CloseRequestAsync(requestId, cancellationToken: default);
+            await _userRequestService.CloseRequestAsync(requestId, default);
             return Ok(new { Message = "Request successfully canceled." });
         }
         catch (KeyNotFoundException)
@@ -80,9 +110,9 @@ public async Task<IActionResult> AddRequest([FromForm] UserRequestCreateDto requ
         }
     }
 
-    
+
     /// <summary>
-    /// Получение тикета по Id
+    ///     Получение тикета по Id
     /// </summary>
     /// <param name="requestId"></param>
     /// <param name="cancellationToken"></param>
@@ -97,32 +127,18 @@ public async Task<IActionResult> AddRequest([FromForm] UserRequestCreateDto requ
 
         return Ok(userRequest);
     }
+
     [HttpGet]
     [EnableQuery]
-    public async Task<IActionResult> GetUserRequests(ODataQueryOptions<UserRequestDto> queryOptions)
+    public Task<IActionResult> GetUserRequests(ODataQueryOptions<GetUserRequestDto> queryOptions)
     {
         var userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(userId))
-            return Unauthorized(new { Message = "User ID not found in token." });
+            return Task.FromResult<IActionResult>(Unauthorized(new { Message = "User ID not found in token." }));
 
-        var userRequests =  await _userRequestService.GetUserRequestsByUserIdAsync(userId, queryOptions);
-        return Ok(userRequests);
+        // Получаем все тикеты или отфильтрованные в зависимости от наличия фильтра
+        var userRequests = _userRequestService.GetUserRequestsByUserIdAsync(userId, queryOptions);
+        return Task.FromResult<IActionResult>(Ok(userRequests));
     }
-
-    
-    /*[HttpGet] для админа
-    [EnableQuery]
-    public async Task<IActionResult> GetRequests(ODataQueryOptions<UserRequest> queryOptions)
-    {
-        try
-        {
-            var userRequests = await _userRequestService.GetAllRequestsAsync(queryOptions, default);
-            return Ok(userRequests);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { Message = ex.Message });
-        }
-    }*/
 }

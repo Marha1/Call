@@ -1,9 +1,19 @@
 namespace Domain.Primitives;
-
+/// <summary>
+/// Статус тикета
+/// </summary>
 public enum RequestStatus
 {
-    New,
+/// <summary>
+/// Открыт
+/// </summary>
+    Open,
+/// <summary>
+/// В процессе
+/// </summary>
     InProgress,
-    Completed,
-    Canceled
+/// <summary>
+/// Закрыт
+/// </summary>
+    Closed
 }

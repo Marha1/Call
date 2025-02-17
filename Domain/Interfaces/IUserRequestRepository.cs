@@ -8,7 +8,7 @@ public interface IUserRequestRepository : IRepository<UserRequest>
     public Task<UserRequest?> GetRequestWithAttachmentsAsync(Guid requestId,
         CancellationToken cancellationToken = default);
 
-    Task<IQueryable<UserRequest>> GetUserRequestsAsync(string userId,
-        ODataQueryOptions<UserRequest> queryOptions,
+    IQueryable<UserRequest>? GetUserRequestsAsync(string userId,
+        ODataQueryOptions<UserRequest>? queryOptions,
         CancellationToken cancellationToken = default);
 }

@@ -3,6 +3,7 @@ using Application.Services.Interfaces;
 using AutoMapper;
 using Domain.Interfaces;
 using Domain.Models;
+using Domain.Primitives;
 using Infrastructure.Repository.Implementation;
 using Microsoft.AspNetCore.OData.Query;
 
@@ -37,7 +38,7 @@ public class UserRequestService : IUserRequestService
     /// <returns></returns>
     public async Task<Guid> CreateRequestAsync(
         string userId,
-        string topic,
+        Department topic,
         string description,
         IEnumerable<IFormFile> files,
         CancellationToken cancellationToken = default)
@@ -100,28 +101,59 @@ public async Task CloseRequestAsync(Guid requestId, CancellationToken cancellati
 /// <param name="userId"></param>
 /// <returns></returns>
 /// <exception cref="NotImplementedException"></exception>
-public async Task<IQueryable<UserRequestDto>> GetUserRequestsByUserIdAsync(string userId, ODataQueryOptions<UserRequestDto> queryOptions)
+public  IQueryable<GetUserRequestDto> GetUserRequestsByUserIdAsync(string userId, ODataQueryOptions<GetUserRequestDto> queryOptions)
 {
     if (string.IsNullOrEmpty(userId))
         throw new ArgumentNullException(nameof(userId));
 
     // Получаем запросы пользователя из репозитория
-    var userRequests = await _userRequestRepository.GetUserRequestsAsync(userId, null);
+    var userRequests =  _userRequestRepository.GetUserRequestsAsync(userId, null);
 
     // Преобразуем в DTO
-    var userRequestDtos = _mapper.ProjectTo<UserRequestDto>(userRequests);
+    var userRequestDtos = _mapper.ProjectTo<GetUserRequestDto>(userRequests);
 
-    // Применяем OData фильтры
+    // Если queryOptions не null, применяем фильтрацию
     if (queryOptions != null)
     {
-        userRequestDtos = queryOptions.ApplyTo(userRequestDtos) as IQueryable<UserRequestDto>;
+        userRequestDtos = queryOptions.ApplyTo(userRequestDtos) as IQueryable<GetUserRequestDto>;
     }
 
     return userRequestDtos;
 }
+/// <summary>
+/// Изменение тикета
+/// </summary>
+/// <param name="requestId"></param>
+/// <param name="userId"></param>
+/// <param name="topic"></param>
+/// <param name="description"></param>
+/// <param name="files"></param>
+/// <param name="cancellationToken"></param>
+/// <returns></returns>
+public async Task UpdateRequest(Guid requestId, UpdateUserRequestDto updateRequest, IEnumerable<IFormFile> files, CancellationToken cancellationToken = default)
+{
+    if (updateRequest == null)
+    {
+        throw new ArgumentNullException(nameof(updateRequest));
+    }
+    var existingRequest = await _userRequestRepository.GetByIdAsync(requestId, cancellationToken);
+    if (existingRequest == null)
+    {
+        throw new Exception($"Request with ID {requestId} not found.");
+    }
 
+    _mapper.Map(updateRequest, existingRequest);
 
+    await _userRequestRepository.UpdateAsync(existingRequest, cancellationToken);
 
+    if (files != null && files.Any())
+    {
+        foreach (var file in files)
+        {
+            await _attachmentService.UploadAttachmentAsync(file, requestId, cancellationToken);
+        }
+    }
+}
 
 /// <summary>
     /// Получение по Id
