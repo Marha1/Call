@@ -101,13 +101,13 @@ public async Task CloseRequestAsync(Guid requestId, CancellationToken cancellati
 /// <param name="userId"></param>
 /// <returns></returns>
 /// <exception cref="NotImplementedException"></exception>
-public async Task<IQueryable<GetUserRequestDto>> GetUserRequestsByUserIdAsync(string userId, ODataQueryOptions<GetUserRequestDto> queryOptions)
+public  IQueryable<GetUserRequestDto> GetUserRequestsByUserIdAsync(string userId, ODataQueryOptions<GetUserRequestDto> queryOptions)
 {
     if (string.IsNullOrEmpty(userId))
         throw new ArgumentNullException(nameof(userId));
 
     // Получаем запросы пользователя из репозитория
-    var userRequests = await _userRequestRepository.GetUserRequestsAsync(userId, null);
+    var userRequests =  _userRequestRepository.GetUserRequestsAsync(userId, null);
 
     // Преобразуем в DTO
     var userRequestDtos = _mapper.ProjectTo<GetUserRequestDto>(userRequests);

@@ -1,9 +1,8 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Application.Dtos.AuthDtos;
-using Application.Services.Interfaces;
 using AutoMapper;
+using Domain.Interfaces;
 using Domain.Models;
 using MailKit.Net.Smtp;
 using MailKit.Security;
@@ -17,20 +16,18 @@ public class AccountService : IAccountService
 {
     private readonly IConfiguration _configuration;
     private readonly IMapper _mapper;
-    private readonly RoleManager<IdentityRole> _roleManager;
     private readonly UserManager<AppUser> _userManager;
 
-    public AccountService(UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager,
+    public AccountService(UserManager<AppUser> userManager, 
         IConfiguration configuration, IMapper mapper)
     {
         _userManager = userManager;
-        _roleManager = roleManager;
         _configuration = configuration;
         _mapper = mapper;
     }
 
     /// <summary>
-    /// Генерация,сохранение в бд,отправка токена на почту для сброса
+    ///     Генерация,сохранение в бд,отправка токена на почту для сброса
     /// </summary>
     /// <param name="email"></param>
     /// <exception cref="Exception"></exception>
@@ -39,20 +36,15 @@ public class AccountService : IAccountService
         try
         {
             var user = await _userManager.FindByEmailAsync(email);
-            if (user == null)
-            {
-                throw new Exception("User not found");
-            }
+            if (user == null) throw new Exception("User not found");
 
             var resetToken = new Random().Next(100000, 999999).ToString("D6"); // 6-значный токен
             // Сохранение токена в таблицу AspNetUserTokens
             var result =
                 await _userManager.SetAuthenticationTokenAsync(user, "PasswordReset", "ResetToken", resetToken);
             if (!result.Succeeded)
-            {
                 throw new Exception(
                     $"Failed to store password reset token: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-            }
 
             // Формирование сообщения
             var message = new MimeMessage();
@@ -70,10 +62,10 @@ public class AccountService : IAccountService
             try
             {
                 // Установка соединения с SMTP-сервером
-                await client.ConnectAsync("smtp.gmail.com", 587, MailKit.Security.SecureSocketOptions.StartTls);
+                await client.ConnectAsync("smtp.gmail.com", 587, SecureSocketOptions.StartTls);
 
                 // Аутентификация на SMTP-сервере
-                await client.AuthenticateAsync("timyewlasow@gmail.com","ohpqbczbijhibsqa");
+                await client.AuthenticateAsync("timyewlasow@gmail.com", "ohpqbczbijhibsqa");
 
                 // Отправка сообщения
                 await client.SendAsync(message);
@@ -107,7 +99,7 @@ public class AccountService : IAccountService
 
 
     /// <summary>
-    /// Сброс пароля
+    ///     Сброс пароля
     /// </summary>
     /// <param name="email"></param>
     /// <param name="resetToken"></param>
@@ -117,36 +109,28 @@ public class AccountService : IAccountService
     {
         // Найти пользователя
         var user = await _userManager.FindByEmailAsync(email);
-        if (user == null)
-        {
-            throw new Exception("User not found");
-        }
+        if (user == null) throw new Exception("User not found");
 
         // Получить токен из AspNetUserTokens
         var storedToken = await _userManager.GetAuthenticationTokenAsync(user, "PasswordReset", "ResetToken");
-        if (storedToken != resetToken)
-        {
-            throw new Exception("Invalid or expired password reset token");
-        }
+        if (storedToken != resetToken) throw new Exception("Invalid or expired password reset token");
 
         // Изменить пароль вручную
         var resetResult = await _userManager.RemovePasswordAsync(user);
         if (!resetResult.Succeeded)
-        {
-            throw new Exception($"Failed to remove the old password: {string.Join(", ", resetResult.Errors.Select(e => e.Description))}");
-        }
+            throw new Exception(
+                $"Failed to remove the old password: {string.Join(", ", resetResult.Errors.Select(e => e.Description))}");
 
         var setPasswordResult = await _userManager.AddPasswordAsync(user, newPassword);
         if (!setPasswordResult.Succeeded)
-        {
-            throw new Exception($"Failed to set the new password: {string.Join(", ", setPasswordResult.Errors.Select(e => e.Description))}");
-        }
+            throw new Exception(
+                $"Failed to set the new password: {string.Join(", ", setPasswordResult.Errors.Select(e => e.Description))}");
 
         // Удалить токен после успешного сброса
         await _userManager.RemoveAuthenticationTokenAsync(user, "PasswordReset", "ResetToken");
     }
 
-    
+
     /// <summary>
     ///     Регистрация пользователя
     /// </summary>
@@ -169,8 +153,9 @@ public class AccountService : IAccountService
 
         return "User registered successfully";
     }
+
     /// <summary>
-    /// Авторизация
+    ///     Авторизация
     /// </summary>
     /// <param name="dto"></param>
     /// <returns>Токен авторизации</returns>
@@ -178,9 +163,13 @@ public class AccountService : IAccountService
     /// <exception cref="InvalidOperationException"></exception>
     public async Task<string> LoginAsync(LoginDto dto)
     {
-        var user = await _userManager.FindByEmailAsync(dto.Email);
+        var user = await _userManager.FindByEmailAsync(dto.Login) ??
+                   await _userManager.FindByNameAsync(dto.Login);
+
         if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
             throw new UnauthorizedAccessException("Invalid login or password");
+
+        if (!user.EmailConfirmed) throw new UnauthorizedAccessException("Email is not confirmed");
 
         if (await _userManager.IsLockedOutAsync(user)) throw new UnauthorizedAccessException("User is locked out.");
 

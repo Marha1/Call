@@ -12,19 +12,14 @@ public class ApplicationContext : IdentityDbContext<AppUser>
     public DbSet<Admin> Admins { get; set; }
     public DbSet<UserRequest> UserRequests { get; set; }
     public DbSet<AttachmentUser> Attachments { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
 
     public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
     {
     }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationContext).Assembly);
         base.OnModelCreating(modelBuilder);
-
-        // Регистрация конфигураций
-        modelBuilder.ApplyConfiguration(new AppUserConfiguration());
-        modelBuilder.ApplyConfiguration(new UserConfiguration());
-        modelBuilder.ApplyConfiguration(new OperatorConfiguration());
-        modelBuilder.ApplyConfiguration(new UserRequestConfiguration());
-        modelBuilder.ApplyConfiguration(new AttachmentUserConfiguration());
     }
 }

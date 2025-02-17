@@ -19,7 +19,7 @@ public interface IUserRequestService
     Task CloseRequestAsync(Guid requestId, 
         CancellationToken cancellationToken = default);
 
-    Task<IQueryable<GetUserRequestDto>> GetUserRequestsByUserIdAsync(string userId,
+    IQueryable<GetUserRequestDto> GetUserRequestsByUserIdAsync(string userId,
         ODataQueryOptions<GetUserRequestDto> queryOptions);
 
     public Task UpdateRequest(Guid requestId, UpdateUserRequestDto updateRequest, IEnumerable<IFormFile> files,

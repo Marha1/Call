@@ -1,7 +1,7 @@
 using Application.Services.Interfaces;
 using Domain.Models;
 using Infrastructure.Repository.Implementation;
-using System.IO;
+using Domain.Interfaces;
 
 namespace Application.Services.Implementation
 {

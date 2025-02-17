@@ -1,5 +1,7 @@
 using Application.Dtos.AuthDtos;
 using Application.Services.Interfaces;
+using Domain.Interfaces;
+using Domain.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Application.Controllers;

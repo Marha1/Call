@@ -1,3 +1,5 @@
+using Application.Services.Interfaces;
+using Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

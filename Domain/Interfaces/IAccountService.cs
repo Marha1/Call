@@ -1,6 +1,6 @@
-using Application.Dtos.AuthDtos;
+using Domain.Models;
 
-namespace Application.Services.Interfaces;
+namespace Domain.Interfaces;
 
 public interface IAccountService
 {

@@ -130,32 +130,15 @@ public class UserRequestController : ControllerBase
 
     [HttpGet]
     [EnableQuery]
-    public async Task<IActionResult> GetUserRequests(ODataQueryOptions<GetUserRequestDto> queryOptions)
+    public Task<IActionResult> GetUserRequests(ODataQueryOptions<GetUserRequestDto> queryOptions)
     {
         var userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(userId))
-            return Unauthorized(new { Message = "User ID not found in token." });
+            return Task.FromResult<IActionResult>(Unauthorized(new { Message = "User ID not found in token." }));
 
         // Получаем все тикеты или отфильтрованные в зависимости от наличия фильтра
-        var userRequests = await _userRequestService.GetUserRequestsByUserIdAsync(userId, queryOptions);
-        return Ok(userRequests);
+        var userRequests = _userRequestService.GetUserRequestsByUserIdAsync(userId, queryOptions);
+        return Task.FromResult<IActionResult>(Ok(userRequests));
     }
-
-
-
-    /*[HttpGet] для админа
-    [EnableQuery]
-    public async Task<IActionResult> GetRequests(ODataQueryOptions<UserRequest> queryOptions)
-    {
-        try
-        {
-            var userRequests = await _userRequestService.GetAllRequestsAsync(queryOptions, default);
-            return Ok(userRequests);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { Message = ex.Message });
-        }
-    }*/
 }

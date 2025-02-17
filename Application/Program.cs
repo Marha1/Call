@@ -1,10 +1,15 @@
 using System.Text;
 using Application.Mapping;
+using Application.Middleware;
 using Application.Services.Implementation;
 using Application.Services.Interfaces;
+using Application.Validation;
 using Domain.Interfaces;
 using Domain.Models;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Infrastructure;
+using Infrastructure.ChatHub;
 using Infrastructure.Repository.Implementation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -15,6 +20,20 @@ using Microsoft.AspNetCore.OData;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// CORS Configuration
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin", builder =>
+    {
+        builder
+            .WithOrigins("http://127.0.0.1:5500") // Укажите URL фронтенда
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials(); 
+    });
+});
+
 
 // DbContext
 builder.Services.AddDbContext<ApplicationContext>(options =>
@@ -28,9 +47,18 @@ builder.Services.AddIdentity<AppUser, IdentityRole>()
 // Services
 builder.Services.AddScoped<IUserRequestService, UserRequestService>();
 builder.Services.AddScoped<IUserRequestRepository, UserRequestRepository>();
+builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<AttachmentRepository>();
 builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<IChatRepository, ChatRepository>();
+builder.Services.AddScoped<IOperatorRepository, OperatorRepository>();
+builder.Services.AddSingleton<ProfanityFilterService>();
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
+builder.Services.AddSingleton<OperatorService>();
+builder.Services.AddScoped<AdminService>();
+builder.Services.AddSignalR();
 
 // JWT Authentication
 builder.Services.AddAuthentication(options =>
@@ -49,13 +77,12 @@ builder.Services.AddAuthentication(options =>
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
-            ClockSkew = TimeSpan.Zero // Убирает допуск по времени
+            ClockSkew = TimeSpan.Zero
         };
         options.Events = new JwtBearerEvents
         {
             OnTokenValidated = context =>
             {
-                // Логирование токена и claims для отладки
                 var claims = context.Principal?.Claims.Select(c => $"{c.Type}: {c.Value}");
                 Console.WriteLine("Token validated. Claims: " + string.Join(", ", claims));
                 return Task.CompletedTask;
@@ -67,7 +94,6 @@ builder.Services.AddAuthentication(options =>
             }
         };
     });
-
 
 // OData Configuration
 var modelBuilder = new ODataConventionModelBuilder();
@@ -118,31 +144,20 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Создание ролей при запуске приложения
-using (var scope = app.Services.CreateScope())
-{
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
-    var roles = new[] { "Admin", "Operator", "User" };
-
-    foreach (var role in roles)
-    {
-        if (!await roleManager.RoleExistsAsync(role))
-        {
-            await roleManager.CreateAsync(new IdentityRole(role));
-            Console.WriteLine($"Роль '{role}' была добавлена в базу данных.");
-        }
-    }
-}
-
-
-
-// Middleware
+// Middleware Configuration
+app.UseRouting();
+app.UseCors("AllowSpecificOrigin");
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseMiddleware<ProfanityMiddleware>();
+// Swagger
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseAuthentication(); // Authentication middleware
-app.UseAuthorization();  // Authorization middleware
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+    endpoints.MapHub<ChatHub>("/chatHub").RequireCors("AllowSpecificOrigin"); // Добавьте RequireCors, чтобы явно применить политику
+});
 
-app.MapControllers();
 app.Run();
