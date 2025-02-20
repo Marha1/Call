@@ -42,8 +42,8 @@ public class AccountController : ControllerBase
 
         try
         {
-            var token = await _accountService.LoginAsync(dto);
-            return Ok(new { Token = token });
+            var userInfo = await _accountService.LoginAsync(dto);
+            return Ok(userInfo); // Отправляем всю инфу о пользователе
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -54,6 +54,7 @@ public class AccountController : ControllerBase
             return BadRequest(new { Message = ex.Message });
         }
     }
+
     [HttpPost("send-reset-password-email")]
     public async Task<IActionResult> SendResetPasswordEmail([FromBody] SendResetPasswordDto request)
     {
@@ -75,6 +76,33 @@ public class AccountController : ControllerBase
         {
             await _accountService.ResetPasswordAsync(request.Email, request.ResetToken, request.NewPassword);
             return Ok(new { Message = "Password reset successfully" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+    [HttpPost("send-email-confirmation-code")]
+    public async Task<IActionResult> SendEmailConfirmationCode([FromBody] EmailConfirmationRequestDto request)
+    {
+        try
+        {
+            await _accountService.SendEmailConfirmedCode(request.Email);
+            return Ok(new { Message = "Email confirmation code sent successfully" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    [HttpPost("confirm-email")]
+    public async Task<IActionResult> ConfirmEmail([FromBody] EmailConfirmationDto request)
+    {
+        try
+        {
+            await _accountService.EmailConfirmed(request.Email, request.ConfirmedCode);
+            return Ok(new { Message = "Email confirmed successfully" });
         }
         catch (Exception ex)
         {

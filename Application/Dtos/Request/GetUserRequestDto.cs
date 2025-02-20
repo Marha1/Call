@@ -1,6 +1,8 @@
 using Domain.Primitives;
 
-public class GetUserRequestDto
+namespace Application.Dtos.Request;
+
+public abstract class GetUserRequestDto
 {
     public Guid Id { get; set; }
     public Department Topic { get; set; }

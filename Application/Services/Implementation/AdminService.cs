@@ -1,3 +1,4 @@
+using Application.Dtos.Request;
 using Domain.Models;
 using Microsoft.AspNetCore.Identity;
 
@@ -35,15 +36,31 @@ namespace Application.Services.Implementation
             await _userManager.UpdateAsync(user);
         }
 
-        public async Task<Operator> CreateOperatorAsync(Operator newOperator, string password)
+        public async Task<Operator> CreateOperatorAsync(OperatorDto newOperator, string password)
         {
-            newOperator.LockoutEnabled = true; // Разрешаем блокировку
-            var result = await _userManager.CreateAsync(newOperator, password);
-            if (!result.Succeeded)
-                throw new InvalidOperationException("Ошибка при создании оператора.");
+            try
+            {
+                var operatorEntity = new Operator
+                {
+                    FullName = newOperator.FullName, // Добавлен маппинг FullName
+                    Email = newOperator.Email,
+                    UserName = newOperator.Username,
+                    AssignedDepartment = newOperator.DepartmentOperator,
+                    LockoutEnabled = true
+                };
+                var result = await _userManager.CreateAsync(operatorEntity, password);
+                if (!result.Succeeded)
+                    throw new InvalidOperationException("Ошибка при создании оператора.");
 
-            await _userManager.AddToRoleAsync(newOperator, "Operator");
-            return newOperator;
+                await _userManager.AddToRoleAsync(operatorEntity, "Operator");
+                return operatorEntity;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw new Exception("Ошибка сервера,разработчик безрукий,извините");
+            }
         }
+
     }
 }

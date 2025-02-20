@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Application.Controllers;
 
-[Authorize(Roles = "Operator")]
+[Authorize(Roles = "Operator,User")]
 [ApiController]
 [Route("api/[controller]")]
 public class ChatController : ControllerBase
