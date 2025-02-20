@@ -1,14 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Application.Dtos.AuthDtos;
 using AutoMapper;
 using Domain.Interfaces;
 using Domain.Models;
-using MailKit.Net.Smtp;
-using MailKit.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
-using MimeKit;
 
 namespace Application.Services.Implementation;
 
@@ -17,13 +15,15 @@ public class AccountService : IAccountService
     private readonly IConfiguration _configuration;
     private readonly IMapper _mapper;
     private readonly UserManager<AppUser> _userManager;
+    private readonly IEmailSender _emailSender;
 
-    public AccountService(UserManager<AppUser> userManager, 
-        IConfiguration configuration, IMapper mapper)
+    public AccountService(UserManager<AppUser> userManager,
+        IConfiguration configuration, IMapper mapper, IEmailSender emailSender)
     {
         _userManager = userManager;
         _configuration = configuration;
         _mapper = mapper;
+        _emailSender = emailSender;
     }
 
     /// <summary>
@@ -45,49 +45,7 @@ public class AccountService : IAccountService
             if (!result.Succeeded)
                 throw new Exception(
                     $"Failed to store password reset token: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-
-            // Формирование сообщения
-            var message = new MimeMessage();
-            message.From.Add(new MailboxAddress("Call",
-                "timyewlasow@gmail.com")); // Убедитесь, что email корректный
-            message.To.Add(new MailboxAddress("", email));
-            message.Subject = "Password Reset Request";
-            message.Body = new TextPart("plain")
-            {
-                Text = $"Your password reset code is: {resetToken}"
-            };
-
-            using var client = new SmtpClient();
-
-            try
-            {
-                // Установка соединения с SMTP-сервером
-                await client.ConnectAsync("smtp.gmail.com", 587, SecureSocketOptions.StartTls);
-
-                // Аутентификация на SMTP-сервере
-                await client.AuthenticateAsync("timyewlasow@gmail.com", "ohpqbczbijhibsqa");
-
-                // Отправка сообщения
-                await client.SendAsync(message);
-
-                // Отключение клиента
-                await client.DisconnectAsync(true);
-            }
-            catch (AuthenticationException authEx)
-            {
-                // Проблема с аутентификацией на SMTP-сервере
-                throw new Exception("Authentication failed. Please check your email and password credentials.", authEx);
-            }
-            catch (SmtpCommandException smtpEx)
-            {
-                // Проблема с SMTP-командами
-                throw new Exception($"SMTP Command Error: {smtpEx.Message}. StatusCode: {smtpEx.StatusCode}", smtpEx);
-            }
-            catch (Exception ex)
-            {
-                // Логируем любые другие ошибки при отправке email
-                throw new Exception($"An error occurred while sending the email: {ex.Message}", ex);
-            }
+            await _emailSender.SendResetPasswordEmailAsync(email, resetToken);
         }
         catch (Exception ex)
         {
@@ -140,7 +98,7 @@ public class AccountService : IAccountService
     public async Task<string> RegisterUserAsync(RegisterDto dto)
     {
         var user = _mapper.Map<User>(dto);
-
+        user.UserName = dto.UserName;
         var result = await _userManager.CreateAsync(user, dto.Password);
         if (!result.Succeeded)
             throw new Exception(
@@ -161,51 +119,106 @@ public class AccountService : IAccountService
     /// <returns>Токен авторизации</returns>
     /// <exception cref="UnauthorizedAccessException"></exception>
     /// <exception cref="InvalidOperationException"></exception>
-    public async Task<string> LoginAsync(LoginDto dto)
+    public async Task<UserInfo> LoginAsync(LoginDto dto)
+{
+    var user = await _userManager.FindByEmailAsync(dto.Login) ??
+               await _userManager.FindByNameAsync(dto.Login);
+
+    if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
+        throw new UnauthorizedAccessException("Invalid login or password");
+
+    if (!user.EmailConfirmed) throw new UnauthorizedAccessException("Email is not confirmed");
+
+    if (await _userManager.IsLockedOutAsync(user)) throw new UnauthorizedAccessException("User is locked out.");
+
+    var roles = await _userManager.GetRolesAsync(user);
+
+    var claims = new List<Claim>
     {
-        var user = await _userManager.FindByEmailAsync(dto.Login) ??
-                   await _userManager.FindByNameAsync(dto.Login);
+        new(JwtRegisteredClaimNames.Sub, user.Id),
+        new(JwtRegisteredClaimNames.UniqueName, user.UserName ?? "Unknown"),
+        new(ClaimTypes.Email, user.Email ?? string.Empty)
+    };
+    claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-        if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
-            throw new UnauthorizedAccessException("Invalid login or password");
+    var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ??
+                                     throw new InvalidOperationException("JWT Key is not configured or is invalid"));
+    if (key.Length < 32)
+        throw new InvalidOperationException("JWT Key length must be at least 256 bits (32 bytes).");
 
-        if (!user.EmailConfirmed) throw new UnauthorizedAccessException("Email is not confirmed");
+    var issuer = _configuration["Jwt:Issuer"] ??
+                 throw new InvalidOperationException("JWT Issuer is not configured.");
+    var audience = _configuration["Jwt:Audience"] ??
+                   throw new InvalidOperationException("JWT Audience is not configured.");
 
-        if (await _userManager.IsLockedOutAsync(user)) throw new UnauthorizedAccessException("User is locked out.");
+    var tokenDescriptor = new SecurityTokenDescriptor
+    {
+        Subject = new ClaimsIdentity(claims),
+        Expires = DateTime.UtcNow.AddHours(1),
+        Issuer = issuer,
+        Audience = audience,
+        SigningCredentials =
+            new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+    };
 
-        var roles = await _userManager.GetRolesAsync(user);
+    var tokenHandler = new JwtSecurityTokenHandler();
+    var token = tokenHandler.CreateToken(tokenDescriptor);
 
-        var claims = new List<Claim>
+    return new UserInfo
+    {
+        Id = user.Id,
+        UserName = user.UserName ?? string.Empty,
+        Email = user.Email ?? string.Empty,
+        Roles = roles.ToList(),
+        Token = tokenHandler.WriteToken(token)
+    };
+}
+
+
+    public async Task SendEmailConfirmedCode(string email)
+    {
+        try
         {
-            new(JwtRegisteredClaimNames.Sub, user.Id),
-            new(JwtRegisteredClaimNames.UniqueName, user.UserName ?? "Unknown"),
-            new(ClaimTypes.Email, user.Email ?? string.Empty)
-        };
-        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null) throw new Exception("User not found");
 
-        var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ??
-                                         throw new InvalidOperationException(
-                                             "JWT Key is not configured or is invalid"));
-        if (key.Length < 32)
-            throw new InvalidOperationException("JWT Key length must be at least 256 bits (32 bytes).");
-
-        var issuer = _configuration["Jwt:Issuer"] ??
-                     throw new InvalidOperationException("JWT Issuer is not configured.");
-        var audience = _configuration["Jwt:Audience"] ??
-                       throw new InvalidOperationException("JWT Audience is not configured.");
-
-        var tokenDescriptor = new SecurityTokenDescriptor
+            var confirm = new Random().Next(100000, 999999).ToString("D6"); // 6-значный токен
+            var result =
+                await _userManager.SetAuthenticationTokenAsync(user, "PasswordReset", "ResetToken", confirm);
+            if (!result.Succeeded)
+                throw new Exception(
+                    $"Failed to store password reset token: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            await _emailSender.SendEmailConfirmedCode(email, confirm);
+        }
+        catch (Exception ex)
         {
-            Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddHours(1),
-            Issuer = issuer,
-            Audience = audience,
-            SigningCredentials =
-                new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-        };
+            // Логируем все ошибки
+            Console.WriteLine($"Error in SendResetPasswordEmailAsync: {ex.Message}");
+            throw; // Можно повторно выбросить исключение, чтобы обработать его выше
+        }
+    }
 
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
+    public async Task EmailConfirmed(string email, string confirmedCode)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        try
+        {
+            // Найти пользователя
+            if (user == null) throw new Exception("User not found");
+
+            // Получить токен из AspNetUserTokens
+            var storedToken = await _userManager.GetAuthenticationTokenAsync(user, "PasswordReset", "ResetToken");
+            if (storedToken != confirmedCode) throw new Exception("Invalid or expired password reset token");
+            user.EmailConfirmed = true;
+            // Удалить токен после успешного сброса
+            await _userManager.RemoveAuthenticationTokenAsync(user, "PasswordReset", "ResetToken");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            await _userManager.RemoveAuthenticationTokenAsync(user, "PasswordReset", "ResetToken");
+            throw;
+            
+        }
     }
 }

@@ -1,3 +1,4 @@
+using Application.Dtos.Request;
 using FluentValidation;
 
 namespace Application.Validation;

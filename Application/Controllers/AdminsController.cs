@@ -1,3 +1,4 @@
+using Application.Dtos.Request;
 using Application.Services.Implementation;
 using Domain.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -21,20 +22,33 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> BlockUser([FromQuery] string userId)
     {
         await _adminService.BlockUserAsync(userId);
-        return NoContent();
+        return Ok();
     }
 
     [HttpPost("unblock-user")]
     public async Task<IActionResult> UnblockUser([FromQuery] string userId)
     {
         await _adminService.UnblockUserAsync(userId);
-        return NoContent();
+        return Ok();
     }
 
     [HttpPost("create-operator")]
-    public async Task<IActionResult> CreateOperator([FromBody] Operator newOperator, [FromQuery] string password)
+    public async Task<IActionResult> CreateOperator([FromForm] OperatorDto newOperator)
     {
-        var createdOperator = await _adminService.CreateOperatorAsync(newOperator, password);
-        return CreatedAtAction(nameof(BlockUser), new { id = createdOperator.Id }, createdOperator);
+        try
+        {
+
+            var createdOperator = await _adminService.CreateOperatorAsync(newOperator, newOperator.Password);
+            return Ok(new { Message = "Оператор успешно создан", OperatorId = createdOperator.Id });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Error = "Внутренняя ошибка сервера" });
+        }
     }
 }
+

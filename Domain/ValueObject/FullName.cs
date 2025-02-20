@@ -16,6 +16,11 @@ public class FullName : BaseValueObject
     /// Фамилия
     /// </summary>
     public string? MiddleName { get; set; }
+
+    public FullName()
+    {
+        
+    }
     public FullName(string firstName, string lastName, string? middleName)
     {
         FirstName = firstName;

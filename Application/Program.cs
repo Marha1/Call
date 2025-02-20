@@ -53,10 +53,16 @@ builder.Services.AddScoped<AttachmentRepository>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddScoped<IOperatorRepository, OperatorRepository>();
+builder.Services.AddScoped<IEmailSender, EmailSenderService>();
 builder.Services.AddSingleton<ProfanityFilterService>();
-builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
-builder.Services.AddSingleton<OperatorService>();
+
+
+builder.Services.AddFluentValidation(config =>
+{
+    config.AutomaticValidationEnabled = true;
+    config.RegisterValidatorsFromAssembly(typeof(Program).Assembly);
+});
+builder.Services.AddScoped<OperatorService>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddSignalR();
 
