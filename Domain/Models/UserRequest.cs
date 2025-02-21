@@ -45,8 +45,9 @@ public class UserRequest
     public string? OperatorId { get; set; }
 
     public Operator? Operator { get; set; }
+
     /// <summary>
-    /// Рейтинг(оценка,хз)
+    ///     Рейтинг(оценка,хз)
     /// </summary>
     public int Raiting { get; set; }
 

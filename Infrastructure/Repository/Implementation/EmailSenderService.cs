@@ -8,15 +8,17 @@ namespace Infrastructure.Repository.Implementation;
 
 public class EmailSenderService : IEmailSender
 {
-    private readonly string _smtpServer;
-    private readonly int _smtpPort;
     private readonly string _smtpEmail;
     private readonly string _smtpPassword;
+    private readonly int _smtpPort;
+    private readonly string _smtpServer;
 
     public EmailSenderService(IConfiguration config)
     {
         _smtpServer = config["EmailSettings:SmtpServer"] ?? throw new ArgumentNullException(nameof(_smtpServer));
-        _smtpPort = int.TryParse(config["EmailSettings:SmtpPort"], out var port) ? port : throw new ArgumentException("Invalid SMTP port.");
+        _smtpPort = int.TryParse(config["EmailSettings:SmtpPort"], out var port)
+            ? port
+            : throw new ArgumentException("Invalid SMTP port.");
         _smtpEmail = config["EmailSettings:SmtpEmail"] ?? throw new ArgumentNullException(nameof(_smtpEmail));
         _smtpPassword = config["EmailSettings:SmtpPassword"] ?? throw new ArgumentNullException(nameof(_smtpPassword));
     }

@@ -10,13 +10,15 @@ public interface IUserRequestService
     Task<Guid> CreateRequestAsync(
         string userId,
         Department topic,
-        string description , IEnumerable<IFormFile> files, CancellationToken cancellationToken = default);
-    
-    Task<UserRequestDto?> GetRequestAsync(Guid requestId, 
+        string description, IEnumerable<IFormFile> files, CancellationToken cancellationToken = default);
+
+    Task<UserRequestDto?> GetRequestAsync(Guid requestId,
         CancellationToken cancellationToken = default);
-    Task<IQueryable<UserRequestDto>> GetAllRequestsAsync(ODataQueryOptions<UserRequest> options, 
+
+    Task<IQueryable<UserRequestDto>> GetAllRequestsAsync(ODataQueryOptions<UserRequest> options,
         CancellationToken cancellationToken);
-    Task CloseRequestAsync(Guid requestId, 
+
+    Task CloseRequestAsync(Guid requestId,
         CancellationToken cancellationToken = default);
 
     IQueryable<GetUserRequestDto> GetUserRequestsByUserIdAsync(string userId,
@@ -24,5 +26,4 @@ public interface IUserRequestService
 
     public Task UpdateRequest(Guid requestId, UpdateUserRequestDto updateRequest, IEnumerable<IFormFile> files,
         CancellationToken cancellationToken = default);
-
 }

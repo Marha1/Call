@@ -1,5 +1,4 @@
 using Application.Dtos.AuthDtos;
-using Application.Services.Interfaces;
 using Domain.Interfaces;
 using Domain.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -30,7 +29,7 @@ public class AccountController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
@@ -47,11 +46,11 @@ public class AccountController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { Message = ex.Message });
+            return Unauthorized(new { ex.Message });
         }
         catch (Exception ex)
         {
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
     }
 
@@ -82,6 +81,7 @@ public class AccountController : ControllerBase
             return BadRequest(new { Error = ex.Message });
         }
     }
+
     [HttpPost("send-email-confirmation-code")]
     public async Task<IActionResult> SendEmailConfirmationCode([FromBody] EmailConfirmationRequestDto request)
     {

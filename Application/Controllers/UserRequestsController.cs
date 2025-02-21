@@ -67,7 +67,7 @@ public class UserRequestController : ControllerBase
     {
         try
         {
-            await _userRequestService.UpdateRequest(requestId, requestDto, files, default);
+            await _userRequestService.UpdateRequest(requestId, requestDto, files);
 
             return Ok(new { Message = "Request updated successfully", RequestId = requestId });
         }
@@ -92,7 +92,7 @@ public class UserRequestController : ControllerBase
         try
         {
             // Отмена запроса
-            await _userRequestService.CloseRequestAsync(requestId, default);
+            await _userRequestService.CloseRequestAsync(requestId);
             return Ok(new { Message = "Request successfully canceled." });
         }
         catch (KeyNotFoundException)
