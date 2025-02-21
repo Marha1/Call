@@ -1,16 +1,16 @@
 using System.Text;
-using Application.Services.Implementation;
 using Infrastructure;
 
 namespace Application.Middleware;
 
 public class ProfanityMiddleware
 {
+    private readonly ILogger<ProfanityMiddleware> _logger;
     private readonly RequestDelegate _next;
     private readonly ProfanityFilterService _profanityFilter;
-    private readonly ILogger<ProfanityMiddleware> _logger;
 
-    public ProfanityMiddleware(RequestDelegate next, ProfanityFilterService profanityFilter, ILogger<ProfanityMiddleware> logger)
+    public ProfanityMiddleware(RequestDelegate next, ProfanityFilterService profanityFilter,
+        ILogger<ProfanityMiddleware> logger)
     {
         _next = next;
         _profanityFilter = profanityFilter;
@@ -32,19 +32,19 @@ public class ProfanityMiddleware
             if (_profanityFilter.ContainsProfanity(requestBody))
             {
                 _logger.LogWarning("Обнаружен мат в запросе: {RequestBody}", requestBody);
-                var errorResponse = new 
+                var errorResponse = new
                 {
                     Message = "Иди отсюда,Быдло!",
                     StatusCode = StatusCodes.Status400BadRequest
                 };
-    
+
                 // Устанавливаем код ошибки и тип контента
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 context.Response.ContentType = "application/json";
-    
+
                 // Отправляем JSON-ответ
                 await context.Response.WriteAsJsonAsync(errorResponse);
-    
+
                 return;
             }
         }

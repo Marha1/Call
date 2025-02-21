@@ -7,5 +7,4 @@ public class ChatMessage
     public string Message { get; set; }
     public string SenderId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow.ToUniversalTime();
-    
 }

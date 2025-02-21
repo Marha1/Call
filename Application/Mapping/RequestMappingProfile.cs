@@ -4,7 +4,7 @@ using Domain.Models;
 
 namespace Application.Mapping;
 
-public class RequestMappingProfile:Profile
+public class RequestMappingProfile : Profile
 {
     public RequestMappingProfile()
     {

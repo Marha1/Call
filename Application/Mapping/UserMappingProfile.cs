@@ -1,4 +1,3 @@
-using Application.Dtos.AuthDtos;
 using AutoMapper;
 using Domain.Models;
 using Domain.ValueObject;
@@ -11,6 +10,7 @@ public class UserMappingProfile : Profile
     {
         CreateMap<RegisterDto, User>()
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
-            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => new FullName(src.FirstName, src.LastName, src.Surname)));
+            .ForMember(dest => dest.FullName,
+                opt => opt.MapFrom(src => new FullName(src.FirstName, src.LastName, src.Surname)));
     }
 }

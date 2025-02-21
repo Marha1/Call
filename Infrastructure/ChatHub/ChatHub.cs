@@ -1,86 +1,87 @@
 using Domain.Interfaces;
 using Microsoft.AspNetCore.SignalR;
+
 namespace Infrastructure.ChatHub;
+
 /// <summary>
-/// Класс для чата user/operator
+///     Класс для чата user/operator
 /// </summary>
 public class ChatHub : Hub
 {
     private readonly IChatService _chatService;
     private readonly ProfanityFilterService _profanityFilter;
 
-    public ChatHub(IChatService chatService,ProfanityFilterService _profanity)
+    public ChatHub(IChatService chatService, ProfanityFilterService _profanity)
     {
         _chatService = chatService;
         _profanityFilter = _profanity;
     }
+
     /// <summary>
-    /// Для отправки сообщения
+    ///     Для отправки сообщения
     /// </summary>
     /// <param name="requestId"></param>
     /// <param name="userId"></param>
     /// <param name="message"></param>
     public async Task SendMessage(string requestId, string userId, string message)
     {
-        if (_profanityFilter.ContainsProfanity(message))
-        {
-            message = "*****";
-        }
+        if (_profanityFilter.ContainsProfanity(message)) message = "*****";
         _profanityFilter.ContainsProfanity(message);
         // Сохраняем сообщение через сервис
-        await _chatService.SaveMessageAsync(Guid.Parse( requestId), userId, message);
+        await _chatService.SaveMessageAsync(Guid.Parse(requestId), userId, message);
 
         // Рассылаем сообщение всем участникам группы
-        await Clients.Group(requestId.ToString()).SendAsync("ReceiveMessage", userId, message);
+        await Clients.Group(requestId).SendAsync("ReceiveMessage", userId, message);
     }
 
     /// <summary>
-    /// Закрытие тикета/чата
+    ///     Закрытие тикета/чата
     /// </summary>
     /// <param name="requestId"></param>
     public async Task CloseChat(string requestId)
     {
         // Закрываем тикет
-        await _chatService.CloseRequestAsync(Guid.Parse( requestId));
+        await _chatService.CloseRequestAsync(Guid.Parse(requestId));
 
         // Оповещаем участников о закрытии чата
-        await Clients.Group(requestId.ToString()).SendAsync("ChatClosed", requestId);
+        await Clients.Group(requestId).SendAsync("ChatClosed", requestId);
 
         // Запрашиваем у пользователя рейтинг
-        await Clients.Group(requestId.ToString()).SendAsync("RequestRating", requestId);
+        await Clients.Group(requestId).SendAsync("RequestRating", requestId);
 
         // Удаляем участников из группы
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, requestId.ToString());
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, requestId);
     }
 
     /// <summary>
-    /// Метод для рейтинга
+    ///     Метод для рейтинга
     /// </summary>
     /// <param name="requestId"></param>
     /// <param name="rating"></param>
     public async Task SubmitRating(string requestId, int rating)
     {
         // Сохраняем рейтинг через сервис
-        await _chatService.SaveRatingAsync(Guid.Parse( requestId), rating);
+        await _chatService.SaveRatingAsync(Guid.Parse(requestId), rating);
 
         // Уведомляем участников о выставленном рейтинге
-        await Clients.Group(requestId.ToString()).SendAsync("RatingSubmitted", requestId, rating);
+        await Clients.Group(requestId).SendAsync("RatingSubmitted", requestId, rating);
     }
 
     /// <summary>
-    /// Создание/подключение к чату
+    ///     Создание/подключение к чату
     /// </summary>
     /// <param name="requestId"></param>
     public async Task JoinChat(string requestId)
     {
         // Подключаем пользователя к группе
-        await Groups.AddToGroupAsync(Context.ConnectionId, requestId.ToString());
+        await Groups.AddToGroupAsync(Context.ConnectionId, requestId);
 
         // Отправляем уведомление о подключении
-        await Clients.Group(requestId.ToString()).SendAsync("UserJoined", Context.ConnectionId);
+        await Clients.Group(requestId).SendAsync("UserJoined", Context.ConnectionId);
     }
+
     /// <summary>
-    /// получение сообщений
+    ///     получение сообщений
     /// </summary>
     /// <param name="requestId"></param>
     public async Task LoadChatHistory(string requestId)
@@ -93,7 +94,7 @@ public class ChatHub : Hub
     }
 
     /// <summary>
-    /// Отключение от чата при ошибке
+    ///     Отключение от чата при ошибке
     /// </summary>
     /// <param name="exception"></param>
     public override async Task OnDisconnectedAsync(Exception? exception)

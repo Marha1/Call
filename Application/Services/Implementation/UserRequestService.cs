@@ -11,10 +11,10 @@ namespace Application.Services.Implementation;
 
 public class UserRequestService : IUserRequestService
 {
-    private readonly IUserRequestRepository _userRequestRepository;
     private readonly AttachmentRepository _attachmentRepository;
     private readonly IAttachmentService _attachmentService;
     private readonly IMapper _mapper;
+    private readonly IUserRequestRepository _userRequestRepository;
 
     public UserRequestService(
         IUserRequestRepository userRequestRepository,
@@ -27,8 +27,9 @@ public class UserRequestService : IUserRequestService
         _attachmentService = attachmentService;
         _mapper = mapper;
     }
+
     /// <summary>
-    /// Создание
+    ///     Создание
     /// </summary>
     /// <param name="userId"></param>
     /// <param name="topic"></param>
@@ -56,107 +57,97 @@ public class UserRequestService : IUserRequestService
         await _userRequestRepository.SaveChangesAsync(cancellationToken);
 
         foreach (var file in files)
-        { 
             await _attachmentService.UploadAttachmentAsync(file, userRequest.Id, cancellationToken);
-        }
 
         await _userRequestRepository.SaveChangesAsync(cancellationToken);
         return userRequest.Id;
     }
+
     /// <summary>
-    /// Получение с фильтрацией(мб уберется)
+    ///     Получение с фильтрацией(мб уберется)
     /// </summary>
     /// <param name="options"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<IQueryable<UserRequestDto>> GetAllRequestsAsync(ODataQueryOptions<UserRequest> options, CancellationToken cancellationToken)
+    public async Task<IQueryable<UserRequestDto>> GetAllRequestsAsync(ODataQueryOptions<UserRequest> options,
+        CancellationToken cancellationToken)
     {
         var queryable = await _userRequestRepository.GetQueryableAsync(options, cancellationToken);
         return _mapper.ProjectTo<UserRequestDto>(queryable);
     }
-/// <summary>
-/// Закрытие тикета
-/// </summary>
-/// <param name="requestId"></param>
-/// <param name="cancellationToken"></param>
-/// <returns></returns>
-/// <exception cref="NotImplementedException"></exception>
-public async Task CloseRequestAsync(Guid requestId, CancellationToken cancellationToken = default)
-{
-    if (requestId == Guid.Empty) 
-        throw new ArgumentNullException(nameof(requestId));
 
-    // Получаем запрос по ID
-    var request = await _userRequestRepository.GetByIdAsync(requestId, cancellationToken);
-    if (request == null)
+    /// <summary>
+    ///     Закрытие тикета
+    /// </summary>
+    /// <param name="requestId"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public async Task CloseRequestAsync(Guid requestId, CancellationToken cancellationToken = default)
     {
-        throw new KeyNotFoundException($"Request with ID {requestId} not found.");
-    }
-    await _userRequestRepository.DeleteAsync(request, cancellationToken);
-    await _userRequestRepository.SaveChangesAsync(cancellationToken);
-}
-/// <summary>
-/// Получение тикетов(с фпомощью фильтрации по id юзера)
-/// </summary>
-/// <param name="userId"></param>
-/// <returns></returns>
-/// <exception cref="NotImplementedException"></exception>
-public  IQueryable<GetUserRequestDto> GetUserRequestsByUserIdAsync(string userId, ODataQueryOptions<GetUserRequestDto> queryOptions)
-{
-    if (string.IsNullOrEmpty(userId))
-        throw new ArgumentNullException(nameof(userId));
+        if (requestId == Guid.Empty)
+            throw new ArgumentNullException(nameof(requestId));
 
-    // Получаем запросы пользователя из репозитория
-    var userRequests =  _userRequestRepository.GetUserRequestsAsync(userId, null);
-
-    // Преобразуем в DTO
-    var userRequestDtos = _mapper.ProjectTo<GetUserRequestDto>(userRequests);
-
-    // Если queryOptions не null, применяем фильтрацию
-    if (queryOptions != null)
-    {
-        userRequestDtos = queryOptions.ApplyTo(userRequestDtos) as IQueryable<GetUserRequestDto>;
+        // Получаем запрос по ID
+        var request = await _userRequestRepository.GetByIdAsync(requestId, cancellationToken);
+        if (request == null) throw new KeyNotFoundException($"Request with ID {requestId} not found.");
+        await _userRequestRepository.DeleteAsync(request, cancellationToken);
+        await _userRequestRepository.SaveChangesAsync(cancellationToken);
     }
 
-    return userRequestDtos;
-}
-/// <summary>
-/// Изменение тикета
-/// </summary>
-/// <param name="requestId"></param>
-/// <param name="userId"></param>
-/// <param name="topic"></param>
-/// <param name="description"></param>
-/// <param name="files"></param>
-/// <param name="cancellationToken"></param>
-/// <returns></returns>
-public async Task UpdateRequest(Guid requestId, UpdateUserRequestDto updateRequest, IEnumerable<IFormFile> files, CancellationToken cancellationToken = default)
-{
-    if (updateRequest == null)
+    /// <summary>
+    ///     Получение тикетов(с фпомощью фильтрации по id юзера)
+    /// </summary>
+    /// <param name="userId"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public IQueryable<GetUserRequestDto> GetUserRequestsByUserIdAsync(string userId,
+        ODataQueryOptions<GetUserRequestDto> queryOptions)
     {
-        throw new ArgumentNullException(nameof(updateRequest));
+        if (string.IsNullOrEmpty(userId))
+            throw new ArgumentNullException(nameof(userId));
+
+        // Получаем запросы пользователя из репозитория
+        var userRequests = _userRequestRepository.GetUserRequestsAsync(userId, null);
+
+        // Преобразуем в DTO
+        var userRequestDtos = _mapper.ProjectTo<GetUserRequestDto>(userRequests);
+
+        // Если queryOptions не null, применяем фильтрацию
+        if (queryOptions != null)
+            userRequestDtos = queryOptions.ApplyTo(userRequestDtos) as IQueryable<GetUserRequestDto>;
+
+        return userRequestDtos;
     }
-    var existingRequest = await _userRequestRepository.GetByIdAsync(requestId, cancellationToken);
-    if (existingRequest == null)
+
+    /// <summary>
+    ///     Изменение тикета
+    /// </summary>
+    /// <param name="requestId"></param>
+    /// <param name="userId"></param>
+    /// <param name="topic"></param>
+    /// <param name="description"></param>
+    /// <param name="files"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public async Task UpdateRequest(Guid requestId, UpdateUserRequestDto updateRequest, IEnumerable<IFormFile> files,
+        CancellationToken cancellationToken = default)
     {
-        throw new Exception($"Request with ID {requestId} not found.");
+        if (updateRequest == null) throw new ArgumentNullException(nameof(updateRequest));
+        var existingRequest = await _userRequestRepository.GetByIdAsync(requestId, cancellationToken);
+        if (existingRequest == null) throw new Exception($"Request with ID {requestId} not found.");
+
+        _mapper.Map(updateRequest, existingRequest);
+
+        await _userRequestRepository.UpdateAsync(existingRequest, cancellationToken);
+
+        if (files != null && files.Any())
+            foreach (var file in files)
+                await _attachmentService.UploadAttachmentAsync(file, requestId, cancellationToken);
     }
 
-    _mapper.Map(updateRequest, existingRequest);
-
-    await _userRequestRepository.UpdateAsync(existingRequest, cancellationToken);
-
-    if (files != null && files.Any())
-    {
-        foreach (var file in files)
-        {
-            await _attachmentService.UploadAttachmentAsync(file, requestId, cancellationToken);
-        }
-    }
-}
-
-/// <summary>
-    /// Получение по Id
+    /// <summary>
+    ///     Получение по Id
     /// </summary>
     /// <param name="requestId"></param>
     /// <param name="cancellationToken"></param>
@@ -166,6 +157,9 @@ public async Task UpdateRequest(Guid requestId, UpdateUserRequestDto updateReque
         var userRequest = await _userRequestRepository.GetRequestWithAttachmentsAsync(requestId, cancellationToken);
         return userRequest == null ? null : _mapper.Map<UserRequestDto>(userRequest);
     }
-    
+    public async Task<List<UserRequest>> GetAllUserRequestsByUserIdAsync(string userId)
+    {
+        return await _userRequestRepository.GetUserRequestsByUserIdAsync(userId);
+    }
     
 }

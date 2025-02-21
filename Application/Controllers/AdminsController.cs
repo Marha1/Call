@@ -1,6 +1,5 @@
 using Application.Dtos.Request;
 using Application.Services.Implementation;
-using Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -37,7 +36,6 @@ public class AdminController : ControllerBase
     {
         try
         {
-
             var createdOperator = await _adminService.CreateOperatorAsync(newOperator, newOperator.Password);
             return Ok(new { Message = "Оператор успешно создан", OperatorId = createdOperator.Id });
         }
@@ -51,4 +49,3 @@ public class AdminController : ControllerBase
         }
     }
 }
-

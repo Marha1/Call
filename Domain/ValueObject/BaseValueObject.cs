@@ -5,7 +5,7 @@ namespace Domain.ValueObject;
 public abstract class BaseValueObject : IEquatable<BaseValueObject>
 {
     /// <summary>
-    /// Определяет, равен ли текущий объект значению другого объекта.
+    ///     Определяет, равен ли текущий объект значению другого объекта.
     /// </summary>
     /// <param name="other">Другой объект для сравнения.</param>
     /// <returns>True, если объекты равны; иначе False.</returns>
@@ -34,7 +34,7 @@ public abstract class BaseValueObject : IEquatable<BaseValueObject>
     }
 
     /// <summary>
-    /// Переопределение метода Equals для сравнения объектов.
+    ///     Переопределение метода Equals для сравнения объектов.
     /// </summary>
     /// <param name="obj">Объект для сравнения.</param>
     /// <returns>True, если объекты равны; иначе False.</returns>
@@ -44,7 +44,7 @@ public abstract class BaseValueObject : IEquatable<BaseValueObject>
     }
 
     /// <summary>
-    /// Переопределение метода GetHashCode для вычисления хеш-кода на основе всех полей и свойств.
+    ///     Переопределение метода GetHashCode для вычисления хеш-кода на основе всех полей и свойств.
     /// </summary>
     /// <returns>Хеш-код объекта.</returns>
     public override int GetHashCode()
@@ -67,7 +67,7 @@ public abstract class BaseValueObject : IEquatable<BaseValueObject>
     }
 
     /// <summary>
-    /// Получает список всех доступных свойств объекта для сравнения.
+    ///     Получает список всех доступных свойств объекта для сравнения.
     /// </summary>
     /// <returns>Коллекция свойств объекта.</returns>
     private IEnumerable<PropertyInfo> GetProperties()
@@ -77,7 +77,7 @@ public abstract class BaseValueObject : IEquatable<BaseValueObject>
     }
 
     /// <summary>
-    /// Получает список всех доступных полей объекта для сравнения.
+    ///     Получает список всех доступных полей объекта для сравнения.
     /// </summary>
     /// <returns>Коллекция полей объекта.</returns>
     private IEnumerable<FieldInfo> GetFields()
@@ -86,7 +86,7 @@ public abstract class BaseValueObject : IEquatable<BaseValueObject>
     }
 
     /// <summary>
-    /// Оператор сравнения на равенство для объектов значений.
+    ///     Оператор сравнения на равенство для объектов значений.
     /// </summary>
     /// <param name="left">Левый объект для сравнения.</param>
     /// <param name="right">Правый объект для сравнения.</param>
@@ -97,7 +97,7 @@ public abstract class BaseValueObject : IEquatable<BaseValueObject>
     }
 
     /// <summary>
-    /// Оператор сравнения на неравенство для объектов значений.
+    ///     Оператор сравнения на неравенство для объектов значений.
     /// </summary>
     /// <param name="left">Левый объект для сравнения.</param>
     /// <param name="right">Правый объект для сравнения.</param>

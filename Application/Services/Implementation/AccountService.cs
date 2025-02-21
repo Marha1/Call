@@ -1,7 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Application.Dtos.AuthDtos;
 using AutoMapper;
 using Domain.Interfaces;
 using Domain.Models;
@@ -13,9 +12,9 @@ namespace Application.Services.Implementation;
 public class AccountService : IAccountService
 {
     private readonly IConfiguration _configuration;
+    private readonly IEmailSender _emailSender;
     private readonly IMapper _mapper;
     private readonly UserManager<AppUser> _userManager;
-    private readonly IEmailSender _emailSender;
 
     public AccountService(UserManager<AppUser> userManager,
         IConfiguration configuration, IMapper mapper, IEmailSender emailSender)
@@ -120,59 +119,60 @@ public class AccountService : IAccountService
     /// <exception cref="UnauthorizedAccessException"></exception>
     /// <exception cref="InvalidOperationException"></exception>
     public async Task<UserInfo> LoginAsync(LoginDto dto)
-{
-    var user = await _userManager.FindByEmailAsync(dto.Login) ??
-               await _userManager.FindByNameAsync(dto.Login);
-
-    if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
-        throw new UnauthorizedAccessException("Invalid login or password");
-
-    if (!user.EmailConfirmed) throw new UnauthorizedAccessException("Email is not confirmed");
-
-    if (await _userManager.IsLockedOutAsync(user)) throw new UnauthorizedAccessException("User is locked out.");
-
-    var roles = await _userManager.GetRolesAsync(user);
-
-    var claims = new List<Claim>
     {
-        new(JwtRegisteredClaimNames.Sub, user.Id),
-        new(JwtRegisteredClaimNames.UniqueName, user.UserName ?? "Unknown"),
-        new(ClaimTypes.Email, user.Email ?? string.Empty)
-    };
-    claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+        var user = await _userManager.FindByEmailAsync(dto.Login) ??
+                   await _userManager.FindByNameAsync(dto.Login);
 
-    var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ??
-                                     throw new InvalidOperationException("JWT Key is not configured or is invalid"));
-    if (key.Length < 32)
-        throw new InvalidOperationException("JWT Key length must be at least 256 bits (32 bytes).");
+        if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
+            throw new UnauthorizedAccessException("Invalid login or password");
 
-    var issuer = _configuration["Jwt:Issuer"] ??
-                 throw new InvalidOperationException("JWT Issuer is not configured.");
-    var audience = _configuration["Jwt:Audience"] ??
-                   throw new InvalidOperationException("JWT Audience is not configured.");
+        if (!user.EmailConfirmed) throw new UnauthorizedAccessException("Email is not confirmed");
 
-    var tokenDescriptor = new SecurityTokenDescriptor
-    {
-        Subject = new ClaimsIdentity(claims),
-        Expires = DateTime.UtcNow.AddHours(1),
-        Issuer = issuer,
-        Audience = audience,
-        SigningCredentials =
-            new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-    };
+        if (await _userManager.IsLockedOutAsync(user)) throw new UnauthorizedAccessException("User is locked out.");
 
-    var tokenHandler = new JwtSecurityTokenHandler();
-    var token = tokenHandler.CreateToken(tokenDescriptor);
+        var roles = await _userManager.GetRolesAsync(user);
 
-    return new UserInfo
-    {
-        Id = user.Id,
-        UserName = user.UserName ?? string.Empty,
-        Email = user.Email ?? string.Empty,
-        Roles = roles.ToList(),
-        Token = tokenHandler.WriteToken(token)
-    };
-}
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.Id),
+            new(JwtRegisteredClaimNames.UniqueName, user.UserName ?? "Unknown"),
+            new(ClaimTypes.Email, user.Email ?? string.Empty)
+        };
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+        var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ??
+                                         throw new InvalidOperationException(
+                                             "JWT Key is not configured or is invalid"));
+        if (key.Length < 32)
+            throw new InvalidOperationException("JWT Key length must be at least 256 bits (32 bytes).");
+
+        var issuer = _configuration["Jwt:Issuer"] ??
+                     throw new InvalidOperationException("JWT Issuer is not configured.");
+        var audience = _configuration["Jwt:Audience"] ??
+                       throw new InvalidOperationException("JWT Audience is not configured.");
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.UtcNow.AddHours(1),
+            Issuer = issuer,
+            Audience = audience,
+            SigningCredentials =
+                new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+
+        return new UserInfo
+        {
+            Id = user.Id,
+            UserName = user.UserName ?? string.Empty,
+            Email = user.Email ?? string.Empty,
+            Roles = roles.ToList(),
+            Token = tokenHandler.WriteToken(token)
+        };
+    }
 
 
     public async Task SendEmailConfirmedCode(string email)
@@ -218,7 +218,6 @@ public class AccountService : IAccountService
             Console.WriteLine(e);
             await _userManager.RemoveAuthenticationTokenAsync(user, "PasswordReset", "ResetToken");
             throw;
-            
         }
     }
 }

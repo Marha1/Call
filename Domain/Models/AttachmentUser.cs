@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Domain.Models;
 
 public class AttachmentUser
@@ -8,5 +10,6 @@ public class AttachmentUser
 
     // Связь с запросом
     public Guid RequestId { get; set; }
-    public UserRequest Request { get; set; }
+
+    [JsonIgnore] public UserRequest Request { get; set; }
 }

@@ -67,7 +67,7 @@ public class UserRequestController : ControllerBase
     {
         try
         {
-            await _userRequestService.UpdateRequest(requestId, requestDto, files, default);
+            await _userRequestService.UpdateRequest(requestId, requestDto, files);
 
             return Ok(new { Message = "Request updated successfully", RequestId = requestId });
         }
@@ -92,7 +92,7 @@ public class UserRequestController : ControllerBase
         try
         {
             // Отмена запроса
-            await _userRequestService.CloseRequestAsync(requestId, default);
+            await _userRequestService.CloseRequestAsync(requestId);
             return Ok(new { Message = "Request successfully canceled." });
         }
         catch (KeyNotFoundException)
@@ -140,5 +140,15 @@ public class UserRequestController : ControllerBase
         // Получаем все тикеты или отфильтрованные в зависимости от наличия фильтра
         var userRequests = _userRequestService.GetUserRequestsByUserIdAsync(userId, queryOptions);
         return Task.FromResult<IActionResult>(Ok(userRequests));
+    }
+    [HttpGet("my-requests")]
+    public async Task<IActionResult> GetUserRequests()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId)) 
+            return Unauthorized(new { Message = "User ID not found in token." });
+
+        var requests = await _userRequestService.GetAllUserRequestsByUserIdAsync(userId);
+        return Ok(requests);
     }
 }
