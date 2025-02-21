@@ -157,4 +157,9 @@ public class UserRequestService : IUserRequestService
         var userRequest = await _userRequestRepository.GetRequestWithAttachmentsAsync(requestId, cancellationToken);
         return userRequest == null ? null : _mapper.Map<UserRequestDto>(userRequest);
     }
+    public async Task<List<UserRequest>> GetAllUserRequestsByUserIdAsync(string userId)
+    {
+        return await _userRequestRepository.GetUserRequestsByUserIdAsync(userId);
+    }
+    
 }

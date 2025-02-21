@@ -11,4 +11,5 @@ public interface IUserRequestRepository : IRepository<UserRequest>
     IQueryable<UserRequest>? GetUserRequestsAsync(string userId,
         ODataQueryOptions<UserRequest>? queryOptions,
         CancellationToken cancellationToken = default);
+    Task<List<UserRequest>> GetUserRequestsByUserIdAsync(string userId);
 }

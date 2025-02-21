@@ -24,6 +24,8 @@ public interface IUserRequestService
     IQueryable<GetUserRequestDto> GetUserRequestsByUserIdAsync(string userId,
         ODataQueryOptions<GetUserRequestDto> queryOptions);
 
+    Task<List<UserRequest>> GetAllUserRequestsByUserIdAsync(string userId);
+
     public Task UpdateRequest(Guid requestId, UpdateUserRequestDto updateRequest, IEnumerable<IFormFile> files,
         CancellationToken cancellationToken = default);
 }

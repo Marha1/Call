@@ -30,6 +30,16 @@ public class OperatorRepository : BaseRepository<Operator>, IOperatorRepository
                 .ToListAsync();
     }
 
+    public async Task<UserRequest?> GetCurrentRequest(string operatorId)
+    {
+        if (string.IsNullOrEmpty(operatorId))
+            throw new ArgumentNullException(nameof(operatorId));
+        return await _context.UserRequests
+            .Where(x => x.OperatorId == operatorId && x.Status == RequestStatus.InProgress)
+            .FirstOrDefaultAsync();
+        
+    }
+
     public async Task<IQueryable<UserRequest>> GetRequestsByDepartmentAsync(
         string operatorId,
         ODataQueryOptions<UserRequest> queryOptions,

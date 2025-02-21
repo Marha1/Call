@@ -10,4 +10,6 @@ public interface IOperatorRepository
 
     Task<IQueryable<UserRequest>> GetRequestsByDepartmentAsync(string operatorId,
         ODataQueryOptions<UserRequest> queryOptions, CancellationToken cancellationToken = default);
+
+    Task<UserRequest?> GetCurrentRequest(string operatorId);
 }

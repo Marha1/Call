@@ -141,4 +141,14 @@ public class UserRequestController : ControllerBase
         var userRequests = _userRequestService.GetUserRequestsByUserIdAsync(userId, queryOptions);
         return Task.FromResult<IActionResult>(Ok(userRequests));
     }
+    [HttpGet("my-requests")]
+    public async Task<IActionResult> GetUserRequests()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId)) 
+            return Unauthorized(new { Message = "User ID not found in token." });
+
+        var requests = await _userRequestService.GetAllUserRequestsByUserIdAsync(userId);
+        return Ok(requests);
+    }
 }

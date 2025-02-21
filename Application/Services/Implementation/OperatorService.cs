@@ -23,6 +23,10 @@ public class OperatorService
     {
         return await _operatorRepository.GetRequestsByDepartmentAsync(operatorId, queryOptions, cancellationToken);
     }
+    public async Task<UserRequest?> GetCurrentRequestAsync(string operatorId)
+    {
+        return await _operatorRepository.GetCurrentRequest(operatorId);
+    }
 
     public async Task TakeRequestAsync(string operatorId, Guid requestId)
     {

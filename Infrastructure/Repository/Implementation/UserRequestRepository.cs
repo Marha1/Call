@@ -52,4 +52,12 @@ public class UserRequestRepository : BaseRepository<UserRequest>, IUserRequestRe
 
         return query;
     }
+
+    public async Task<List<UserRequest>> GetUserRequestsByUserIdAsync(string userId)
+    {
+        return await _context.UserRequests
+            .Where(r => r.UserId == userId)
+            .Include(r => r.Attachments)
+            .ToListAsync();
+    }
 }
