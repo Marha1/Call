@@ -11,7 +11,7 @@ public class OperatorConfiguration : IEntityTypeConfiguration<Operator>
         builder.ToTable("Operators");
 
         builder.Property(o => o.AssignedDepartment)
-            .HasConversion<string>()
+            .HasConversion<int>()
             .IsRequired();
 
         builder.HasMany(o => o.AssignedRequests)

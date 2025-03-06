@@ -2,7 +2,7 @@ using Domain.Primitives;
 
 namespace Application.Dtos.Request;
 
-public abstract class GetUserRequestDto
+public  class GetUserRequestDto
 {
     public Guid Id { get; set; }
     public Department Topic { get; set; }
